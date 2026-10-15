@@ -22,6 +22,13 @@ a tutorial inside the workflow itself, right where the reader needs it.
 - `[Fast](set:8)` becomes a button that sets the hint's first widget target to 8.
 - `[HD](set:width=1280)` sets the target widget named `width` instead.
 
+## Languages
+
+- A hint can carry the same text in several languages. Type a code (`es`, `fr`, `ja`…) in the *+ lang* box above the text and press Enter to add a tab for it.
+- **Main language** sets the code of the first tab. Its text shows whenever the reader's language has no translation.
+- A hint with more than one language shows small language buttons in its panel. The reader's pick applies to every hint and is remembered in that browser; until they pick one, ComfyUI's interface language is used.
+- The contents list and the Markdown export follow the reader's language too.
+
 ## Settings
 
 - **Style**: Info (?), Tip (✦), Warning (!) or Don't touch (lock), each with its own colour.

@@ -5,13 +5,23 @@ import { openNkdModal, nkdButton, nkdSelect, nkdToggle } from "./nkd_modal.js";
 import { renderMarkdown } from "./markdown.js";
 import { targetLabel } from "./geometry.js";
 import { pickTarget } from "./picker.js";
-import { ARROW, HINT, STYLES, ZONE, markChanged, requestRender } from "./overlay.js";
+import { ARROW, HINT, STYLES, ZONE, markChanged, requestRender, viewLang } from "./overlay.js";
 
 const CSS = `
 .nkd-ed { display: grid; grid-template-columns: 1fr 1fr 270px; width: 100%; min-height: 0; }
 .nkd-ed.side-only { grid-template-columns: 1fr; }
+.nkd-ed-text { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid #2a2d35; }
+.nkd-ed-langs { display: flex; align-items: center; gap: 4px; padding: 6px 8px; background: #111318; border-bottom: 1px solid #2a2d35; }
+.nkd-ed-langs button {
+  background: #1a1c22; border: 1px solid #2a2d35; border-radius: 4px; color: rgba(255,255,255,.55);
+  font: 600 11px system-ui, sans-serif; text-transform: uppercase; padding: 2px 8px; cursor: pointer;
+}
+.nkd-ed-langs button.on { color: #4ab4ff; border-color: #4ab4ff; }
+.nkd-ed-langs button i { font-style: normal; margin-left: 6px; color: rgba(255,255,255,.35); }
+.nkd-ed-langs button i:hover { color: #ff6b6b; }
+.nkd-ed .nkd-ed-langs input[type=text] { width: 64px; }
 .nkd-ed textarea {
-  resize: none; background: #0b0d12; color: #e6e9ef; border: none; border-right: 1px solid #2a2d35;
+  flex: 1; resize: none; background: #0b0d12; color: #e6e9ef; border: none;
   padding: 14px; font: 13px/1.5 ui-monospace, monospace; outline: none;
 }
 .nkd-ed .nkd-note-panel.nkd-ed-preview {
@@ -103,19 +113,54 @@ function hintEditor(node) {
   const root = h("div", "nkd-ed");
 
   const text = h("textarea");
-  text.value = p.text ?? "";
   text.placeholder = "## What this does\n\nExplain the node or widget here. **Bold**, _italic_, `code`, lists…\n\nPresets: [SDXL](set:1024) [Flux](set:1360)";
   const preview = h("div", "nkd-note-panel nkd-ed-preview");
   preview.append(h("div"));
   const refreshPreview = () => {
     preview.firstChild.innerHTML = renderMarkdown(text.value) || `<p class="nkd-note-empty">Preview</p>`;
   };
+  // One tab per language: the main text, then each translation in p.texts.
+  p.texts ??= {};
+  const main = () => p.lang || "en";
+  let cur = main();
+  const langBar = h("div", "nkd-ed-langs");
+  const addLang = input("text", "", () => {}, { placeholder: "+ lang", title: "Type a language code (es, fr, ja…) and press Enter" });
+  addLang.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter") return;
+    const code = addLang.value.trim().toLowerCase();
+    if (!/^[a-z]{2,3}(-[a-z0-9]+)?$/.test(code)) return;
+    if (code !== main()) p.texts[code] ??= "";
+    addLang.value = "";
+    showLang(code);
+  });
+  const renderLangs = () => {
+    const tabs = [main(), ...Object.keys(p.texts)].map((l) => {
+      const b = h("button", l === cur ? "on" : null, l);
+      b.title = l === main() ? "Main text, shown when the reader's language has no translation" : "Translation";
+      b.onclick = (e) => {
+        if (e.target.tagName !== "I") return showLang(l);
+        delete p.texts[l];
+        changed(node);
+        showLang(main());
+      };
+      if (l !== main()) b.append(h("i", null, "✕"));
+      return b;
+    });
+    langBar.replaceChildren(...tabs, addLang);
+  };
+  const showLang = (l) => {
+    cur = l;
+    text.value = (l === main() ? p.text : p.texts[l]) ?? "";
+    renderLangs();
+    refreshPreview();
+    text.focus();
+  };
   text.addEventListener("input", () => {
-    p.text = text.value;
+    if (cur === main()) p.text = text.value;
+    else p.texts[cur] = text.value;
     refreshPreview();
     changed(node);
   });
-  refreshPreview();
 
   const side = h("div", "nkd-ed-side");
   const list = h("div");
@@ -169,11 +214,22 @@ function hintEditor(node) {
     section("Tour step", row(step), h("div", "nkd-ed-help", "0 = not in the tour. Numbered hints show their number and play in order from the Guide node.")),
     section("Recommended range", row(min, h("span", null, "to"), max), h("div", "nkd-ed-help", "For the first widget target: its outline turns green inside the range, amber just outside it, red far outside.")),
     section("Panel", row(h("span", null, "Width"), width), pinned),
+    section("Main language", input("text", main(), (v) => {
+      const code = v.trim().toLowerCase();
+      if (!/^[a-z]{2,3}(-[a-z0-9]+)?$/.test(code) || code in p.texts) return;
+      const wasMain = cur === main();
+      p.lang = code;
+      if (wasMain) cur = code;
+      renderLangs();
+      changed(node);
+    }), h("div", "nkd-ed-help", "Language code of the main text. Add translations with the tabs above the text: readers pick the language in the hint's panel.")),
   );
-  root.append(text, preview, side);
+  const textCol = h("div", "nkd-ed-text");
+  textCol.append(langBar, text);
+  root.append(textCol, preview, side);
   modal.body.append(root);
   modal.addPrimary("Done");
-  text.focus();
+  showLang(p.texts[viewLang()] != null ? viewLang() : main());
 }
 
 // ── arrow ────────────────────────────────────────────────────────────────────

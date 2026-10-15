@@ -63,6 +63,14 @@ const CSS = `
   font: 11px Inter, system-ui, sans-serif; padding: 0 7px; cursor: pointer; margin: 1px 0;
 }
 .nkd-note-set:hover { border-color: #4ab4ff; background: rgba(74,180,255,.12); }
+.nkd-note-langs { display: flex; gap: 4px; justify-content: flex-end; margin: -2px -4px 4px 0; }
+.nkd-note-langs:empty { display: none; }
+.nkd-note-langs button {
+  background: none; border: 1px solid transparent; border-radius: 4px; color: rgba(255,255,255,.45);
+  font: 600 10px Inter, system-ui, sans-serif; text-transform: uppercase; padding: 0 5px; cursor: pointer;
+}
+.nkd-note-langs button:hover { color: #fff; }
+.nkd-note-langs button.on { color: #4ab4ff; border-color: #4ab4ff66; }
 .nkd-note-tour { display: none; align-items: center; gap: 8px; margin-top: 9px; padding-top: 8px; border-top: 1px solid #2a2d35; }
 .nkd-note-tour.on { display: flex; }
 .nkd-note-tour button, .nkd-note-toc button, .nkd-note-offer button {
@@ -217,10 +225,18 @@ function drawHint(gc, n, local, out, o) {
 
   // Panel on the side away from the targets, so arrows don't cross it.
   const el = panelFor(n);
-  if (el._text !== p.text) {
-    el._text = p.text;
-    el.firstChild.innerHTML = p.text?.trim()
-      ? renderMarkdown(p.text)
+  const lang = viewLang();
+  const text = hintText(n, lang);
+  const langs = hintLangs(p);
+  const sig = text + "" + langs.join() + "" + lang;
+  if (el._sig !== sig) {
+    el._sig = sig;
+    const shown = langs.includes(lang) ? lang : langs[0];
+    el.children[0].innerHTML = langs.length > 1
+      ? langs.map((l) => `<button data-lang="${escHtml(l)}"${l === shown ? ' class="on"' : ""}>${escHtml(l)}</button>`).join("")
+      : "";
+    el.children[1].innerHTML = text?.trim()
+      ? renderMarkdown(text)
       : `<p class="nkd-note-empty">Empty hint. Double-click the badge to write it.</p>`;
   }
   const width = Number(p.width) || 300;
@@ -301,11 +317,13 @@ function panelFor(n) {
   if (el) return el;
   el = document.createElement("div");
   el.className = "nkd-note-panel";
-  el.innerHTML = `<div></div><div class="nkd-note-tour"><button data-act="prev">‹ Prev</button><span class="count"></span><button data-act="next">Next ›</button><button data-act="end" title="End tour (Esc)">✕</button></div>`;
+  el.innerHTML = `<div class="nkd-note-langs"></div><div></div><div class="nkd-note-tour"><button data-act="prev">‹ Prev</button><span class="count"></span><button data-act="next">Next ›</button><button data-act="end" title="End tour (Esc)">✕</button></div>`;
   el._node = n;
   el.addEventListener("click", (e) => {
     const set = e.target.closest(".nkd-note-set");
     if (set) applyPreset(n, set.dataset.set);
+    const lang = e.target.closest("[data-lang]")?.dataset.lang;
+    if (lang) setViewLang(lang);
     const act = e.target.closest("[data-act]")?.dataset.act;
     if (act === "prev") stepTour(-1);
     if (act === "next") stepTour(1);
@@ -364,6 +382,32 @@ export function applyPreset(n, spec) {
   node.setDirtyCanvas(true, true);
   markChanged();
   requestRender();
+}
+
+// ── languages ────────────────────────────────────────────────────────────────
+
+// A hint's main text is in `lang`; `texts` holds translations by language code.
+// The reader's choice is remembered per browser, starting from ComfyUI's locale.
+const LANG_KEY = "nkd-notes-lang";
+
+export function viewLang() {
+  try {
+    const l = localStorage.getItem(LANG_KEY);
+    if (l) return l;
+  } catch { /* private window */ }
+  return String(app.extensionManager?.setting?.get("Comfy.Locale") || navigator.language || "en").slice(0, 2).toLowerCase();
+}
+
+function setViewLang(lang) {
+  try { localStorage.setItem(LANG_KEY, lang); } catch { /* private window */ }
+  requestRender();
+}
+
+export const hintLangs = (p) => [p.lang || "en", ...Object.keys(p.texts ?? {}).filter((l) => p.texts[l]?.trim())];
+
+export function hintText(n, lang = viewLang()) {
+  const p = n.properties;
+  return lang !== (p.lang || "en") && p.texts?.[lang]?.trim() ? p.texts[lang] : p.text;
 }
 
 export function markChanged() {
@@ -458,7 +502,7 @@ const glyph = (n) => {
   return `<i style="color:${st.color}">${st.glyph ?? "■"}</i>`;
 };
 const escHtml = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
-const hintTitle = (n) => plainTitle(n.properties.text) || "Untitled hint";
+const hintTitle = (n) => plainTitle(hintText(n)) || "Untitled hint";
 
 export function contents(graph) {
   const steps = tourSteps(graph);
@@ -483,8 +527,8 @@ function renderToc(graph) {
   const c = contents(graph);
   const items = [];
   const sig = JSON.stringify([
-    c.steps.map((n) => [n.id, n.properties.step, n.properties.text]),
-    c.notes.map((n) => [n.id, n.properties.text, n.properties.style]),
+    c.steps.map((n) => [n.id, n.properties.step, hintText(n)]),
+    c.notes.map((n) => [n.id, hintText(n), n.properties.style]),
     c.zones.map((n) => [n.id, n.properties.label]),
     c.groups.map((g) => [g.id, g.title]),
   ]);

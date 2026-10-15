@@ -3,7 +3,7 @@
 
 import { app } from "../../scripts/app.js";
 import {
-  ARROW, GUIDE, HINT, STYLES, ZONE, contents, installOverlay, nodesOf, offerTour,
+  ARROW, GUIDE, HINT, STYLES, ZONE, contents, hintText, installOverlay, nodesOf, offerTour,
   rangeStatus, requestRender, startTour, toggleToc, tourSteps,
 } from "./lib/overlay.js";
 import { openEditor } from "./lib/editor.js";
@@ -185,7 +185,7 @@ ZoneNode.prototype.getExtraMenuOptions = editMenu("Edit zone…");
 // A hint's own leading heading becomes its section title; the rest of its
 // headings move under it, and preset links turn into plain `label: value`.
 function exportSection(n, prefix) {
-  let text = n.properties.text?.trim() || "_Empty hint_";
+  let text = hintText(n)?.trim() || "_Empty hint_";
   const head = /^#{1,4}\s+(.*)(\n|$)/.exec(text);
   if (head) text = text.slice(head[0].length).trim();
   text = text
