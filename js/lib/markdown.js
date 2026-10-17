@@ -5,12 +5,19 @@
 const ESC = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
 const esc = (s) => s.replace(/[&<>"']/g, (c) => ESC[c]);
 
+// Bare URLs end before whitespace, an escaped quote/bracket, or trailing punctuation.
+const URL_RE = /https?:\/\/[^\s]+?(?=[.,;:!?)]*(?:\s|$|&lt;|&gt;|&quot;|&#39;))/gi;
+
 function inline(s) {
-  const codes = [];
-  s = esc(s).replace(/`([^`]+)`/g, (_, c) => `\u0000${codes.push(c) - 1}\u0000`);
-  s = s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_, label, href) => {
+  // Code spans and link tags are stashed so emphasis never rewrites a URL.
+  const keep = [];
+  const stash = (html) => `\u0000${keep.push(html) - 1}\u0000`;
+  const a = (href) => `<a href="${href}" target="_blank" rel="noopener noreferrer">`;
+  s = esc(s).replace(/`([^`]+)`/g, (_, c) => stash(`<code>${c}</code>`));
+  s = s.replace(/\[([^\]]+)\]\(([^)\s]+)\)|(https?:\/\/[^\s]+)/gi, (m, label, href, bare) => {
+    if (bare) return bare.replace(URL_RE, (u) => stash(`${a(u)}${u}</a>`));
     if (href.startsWith("set:")) return `<button class="nkd-note-set" data-set="${href.slice(4)}">${label}</button>`;
-    if (/^https?:\/\//i.test(href)) return `<a href="${href}" target="_blank" rel="noopener noreferrer">${label}</a>`;
+    if (/^https?:\/\//i.test(href)) return `${stash(a(href))}${label}</a>`;
     return label;
   });
   s = s
@@ -18,7 +25,7 @@ function inline(s) {
     .replace(/\*([^*\s][^*]*)\*/g, "<em>$1</em>")
     .replace(/(^|\W)_([^_]+)_(?=\W|$)/g, "$1<em>$2</em>")
     .replace(/~~(.+?)~~/g, "<del>$1</del>");
-  return s.replace(/\u0000(\d+)\u0000/g, (_, i) => `<code>${codes[i]}</code>`);
+  return s.replace(/\u0000(\d+)\u0000/g, (_, i) => keep[i]);
 }
 
 export function renderMarkdown(src) {

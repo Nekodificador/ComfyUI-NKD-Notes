@@ -109,7 +109,7 @@ async function pick(modal, node) {
 
 function hintEditor(node) {
   const p = node.properties;
-  const modal = open(node, "😺 NKD Hint", "Markdown · [label](set:value) adds a button that sets the target widget", true);
+  const modal = open(node, "😺 NKD Hint", "Markdown · paste a URL or [label](https://…) to link · [label](set:value) adds a button that sets the target widget", true);
   const root = h("div", "nkd-ed");
 
   const text = h("textarea");

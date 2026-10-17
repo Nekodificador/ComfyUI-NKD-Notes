@@ -18,7 +18,7 @@ a tutorial inside the workflow itself, right where the reader needs it.
 
 ## Markdown
 
-- Headings, **bold**, _italic_, `code`, lists, quotes, code blocks, rules and `https` links.
+- Headings, **bold**, _italic_, `code`, lists, quotes, code blocks, rules and `https` links — `[label](https://…)` or a bare URL pasted as is (Civitai, Hugging Face, GitHub…).
 - `[Fast](set:8)` becomes a button that sets the hint's first widget target to 8.
 - `[HD](set:width=1280)` sets the target widget named `width` instead.
 

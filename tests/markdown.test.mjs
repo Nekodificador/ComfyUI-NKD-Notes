@@ -16,6 +16,14 @@ assert.equal(md("<img src=x onerror=alert(1)>"), "<p>&lt;img src=x onerror=alert
 assert.equal(md("[x](javascript:alert)"), "<p>x</p>");
 assert.equal(md('[x](https://a.com/"onmouseover=1)'), '<p><a href="https://a.com/&quot;onmouseover=1" target="_blank" rel="noopener noreferrer">x</a></p>');
 
+// Bare URLs link up, and emphasis never touches a URL.
+const A = (u, l = u) => `<a href="${u}" target="_blank" rel="noopener noreferrer">${l}</a>`;
+assert.equal(md("LoRA: https://civitai.com/models/123?v=4&x=1."), `<p>LoRA: ${A("https://civitai.com/models/123?v=4&amp;x=1")}.</p>`);
+assert.equal(md("(see https://hf.co/a/_b_/c_d*e*)"), `<p>(see ${A("https://hf.co/a/_b_/c_d*e*")})</p>`);
+assert.equal(md("[**my_lora_v2**](https://hf.co/x/my_lora_v2)"), `<p>${A("https://hf.co/x/my_lora_v2", "<strong>my_lora_v2</strong>")}</p>`);
+assert.equal(md('https://a.com/"onmouseover=1'), `<p>${A("https://a.com/")}&quot;onmouseover=1</p>`);
+assert.equal(md("`https://x.com`"), "<p><code>https://x.com</code></p>");
+
 // Preset chips.
 assert.equal(md("[Fast](set:8) [Wide](set:width=1024)"),
   '<p><button class="nkd-note-set" data-set="8">Fast</button> <button class="nkd-note-set" data-set="width=1024">Wide</button></p>');
