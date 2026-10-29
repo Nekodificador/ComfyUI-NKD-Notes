@@ -28,4 +28,4 @@ Hints, tours and markings that sit on the graph and point at what they explain.
 
 ## License
 
-MIT
+GPL-3.0. See [LICENSE](LICENSE).
