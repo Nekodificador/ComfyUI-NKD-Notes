@@ -121,13 +121,22 @@ function head(tip, back, len) {
   return wing(1) + wing(-1);
 }
 
+// Handle length capped at half the gap along the handle's own axis (the
+// Reroutes rule): a longer handle overshoots and the curve curls back on itself.
+function reach(k, n, a, b, scale) {
+  const gap = Math.abs((b[0] - a[0]) * n[0] + (b[1] - a[1]) * n[1]);
+  return Math.min(k, Math.max(gap * 0.5, 12 * scale));
+}
+
 // Curved arrow from rect `from` to rect `to`. Returns SVG path data.
 export function arrowBetween(from, to, scale) {
   const end = entryPoint(to, center(from), 6 * scale);
   const start = exitPoint(from, end.pt);
   const k = Math.min(dist(start.pt, end.pt) * 0.5, 220 * scale);
-  const c1 = [start.pt[0] + start.n[0] * k, start.pt[1] + start.n[1] * k];
-  const c2 = [end.pt[0] + end.n[0] * k, end.pt[1] + end.n[1] * k];
+  const k1 = reach(k, start.n, start.pt, end.pt, scale);
+  const k2 = reach(k, end.n, start.pt, end.pt, scale);
+  const c1 = [start.pt[0] + start.n[0] * k1, start.pt[1] + start.n[1] * k1];
+  const c2 = [end.pt[0] + end.n[0] * k2, end.pt[1] + end.n[1] * k2];
   return `M${f(start.pt[0])} ${f(start.pt[1])}C${f(c1[0])} ${f(c1[1])} ${f(c2[0])} ${f(c2[1])} ${f(end.pt[0])} ${f(end.pt[1])}` +
     head(end.pt, end.n, 8 * scale);
 }
@@ -135,7 +144,7 @@ export function arrowBetween(from, to, scale) {
 // Arrow that bends through handle `h`: from rect `from` (optional) to rect `to`.
 export function arrowThrough(from, h, to, scale) {
   const end = entryPoint(to, h, 6 * scale);
-  const k2 = dist(h, end.pt) * 0.45;
+  const k2 = reach(dist(h, end.pt) * 0.45, end.n, h, end.pt, scale);
   const c2 = [end.pt[0] + end.n[0] * k2, end.pt[1] + end.n[1] * k2];
   let d;
   if (from) {
