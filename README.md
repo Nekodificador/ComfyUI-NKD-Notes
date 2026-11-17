@@ -7,6 +7,12 @@ teaches itself.
 Every node here is frontend-only: nothing reaches the prompt and nothing changes how the
 workflow runs. Works with the classic canvas and with Nodes 2.0.
 
+<img width="1229" height="1060" alt="17-11-2026_13-03-18" src="https://github.com/user-attachments/assets/d01b35dd-d198-4f1c-8ec6-2cec58c3af2b" />
+
+<img width="1220" height="736" alt="17-11-2026_13-06-17" src="https://github.com/user-attachments/assets/db1ceb08-6511-4849-9e3d-4ace7e6e3416" />
+
+
+
 ## Installation
 
 1. Clone this folder into `ComfyUI/custom_nodes/`.
